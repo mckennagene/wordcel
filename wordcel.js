@@ -9,7 +9,7 @@ console.log("+-------+-------+-------+-------+-------+");
 var userId; // used for logging primarily
 
 // key DOM elements we need to be updating
-//const gameBoard = document.getElementById('game-board');
+const gameBoard = document.getElementById('game-board');
 const scoreDiv = document.getElementById('score');
 const msgDiv = document.getElementById('messages');
 var go4itbtn = document.getElementById("go4broke");
@@ -40,9 +40,12 @@ const NUM_ROWS = 3;
 const STARTING_POINTS = 80;
 const POINTS_PER_HINT = 10;
 var hintsClicked = 0;
+var secondsUsed = 0;
 var numberCorrect = 0;
 var wrongAnswers = 0; // may not be needed anymore
 var keyboardMode = KEYBD_VIRTUAL; // STANDARD; // VIRTUAL;
+var youlost = false;
+var feedbackSteps = 0;
 
 //
 // Set up the Game Data, use the date to get today's puzzle
@@ -61,7 +64,7 @@ const daysSinceEpoch = Math.floor(dt / 8.64e7);
 //console.log("days since 1/1/70 is" + daysSinceEpoch);
 var gameData = JSON.parse(jsonData);
 var totalGames = gameData.length;
-var gameNumber = (daysSinceEpoch - 19793) % totalGames; // roll over when we reach the end
+var gameNumber = (daysSinceEpoch - 19792) % totalGames; // roll over when we reach the end
 var thisGame = gameData[gameNumber]; // today's game data
 var sets = [];
 var hints = [];
@@ -82,7 +85,7 @@ var timerRunning = false;
 let timerId = null;
 
 function computePoints() {
-    return STARTING_POINTS - POINTS_PER_HINT * hintsClicked;
+    return STARTING_POINTS - POINTS_PER_HINT * hintsClicked - secondsUsed;
 }
 // as soon as everything is fully loaded, this will get called
 window.onload = function () {
@@ -322,8 +325,30 @@ function clickOnHint(event) {
 }
 
 function clickGoForBroke() {
+    var inst = getCookie('g4bi');
+    if( inst != "0" ) { 
+        //gameBoard.style.display = "none";
+        var div = document.getElementById("go4bhelp");
+        div.style.display="flex";
+    } else { 
+        goForBroke() ;
+    }
+}
+function dontGoForBroke() {
+    var div = document.getElementById("go4bhelp");
+    div.style.display = "none";
+    //gameBoard.style.display = "block";
+}
+
+function goForBroke() {
     log("Go4Broke");
-    msgDiv.innerText = computePoints() + " seconds left";
+    var inst = document.getElementById("go4bInstCheckbox");
+    if (inst.checked) { setCookie("g4bi", "0", 365); }
+    var div = document.getElementById("go4bhelp");
+    div.style.display = "none";
+    //gameBoard.style.display = "block";
+
+    msgDiv.innerText = computePoints() + " points left";
     scoreDiv.style.display = 'none';
     go4itbtn.style.display = 'none';
 
@@ -440,6 +465,23 @@ function leaveDiv(event) {
     properlySizeText(currentInputDiv);
     updateScore();
     if (event) { event.stopPropagation(); }
+    currentInputDiv = null;
+}
+
+function rating(n) { 
+    log( "Rating_" + n ) ; 
+    document.getElementById("thumbsUp").style.display="none";
+    document.getElementById("thumbsDown").style.display = "none";
+    feedbackSteps++;
+    if (feedbackSteps == 2) { document.getElementById("feedback").style.display = "none"; }
+}
+function sendFeedback() { 
+    var msg = document.getElementById('commentInput').value; 
+    log("Feedback_" + msg); 
+    document.getElementById("commentInput").style.display = "none";
+    document.getElementById("sendFeedback").style.display = "none";
+    feedbackSteps++;
+    if( feedbackSteps == 2) { document.getElementById("feedback").style.display = "none"; }
 }
 
 // Event listener for input changes
@@ -512,6 +554,9 @@ function showHint(row, col, hint) {
     const c2 = document.getElementById(id);
     c2.innerHTML = hint;
     c2.style.opacity = '1.0';
+    if( col == 2 || col == 4 ) { 
+        c2.style.alignItems = 'flex-start'; // align to top of div
+    }
     //console.log("set opacity of " + c2 + " to 1.0");
     log("Hint");
 }
@@ -565,15 +610,16 @@ function updateScore() {
             }
         }
     }
-    if (numberCorrect == 6) {
+    if (numberCorrect == 6 && !youlost) {
         scoreDiv.style.display = "none";
         go4itbtn.style.display = "none";
-        msgDiv.innerText = "You Got It!";
+        msgDiv.innerText = "You Got It! " + computePoints() + " pts";
         log("Solved");
         stopTimer();
         disableTextEntry();
         colorAllGreen();
         clearInterval(completionCheckInterval);
+        showFeedback();
     }
     else {
         if (!postGo4It) {
@@ -583,7 +629,6 @@ function updateScore() {
             scoreDiv.style.color = scoreColors[score];
         }
     }
-
 }
 
 function startTimer() {
@@ -597,7 +642,8 @@ function startTimer() {
     // Update the div content every second
     timerId = setInterval(function () {
         timeLeft--;
-        msgDiv.innerHTML = `${timeLeft} seconds left`;
+        secondsUsed++;
+        msgDiv.innerHTML = `${timeLeft} points left`;
         updateScore();
         // When countdown is over
         if (timeLeft <= 0) {
@@ -634,7 +680,7 @@ function startGame() {
     if (checkbox.checked) { setCookie("wordcel-instr", "no-mas", 365); }
 
     // Show the game board
-    document.getElementById('game-board').style.display = 'block';
+    gameBoard.style.display = 'block';
 
     //console.log("in startGame");
 
@@ -663,7 +709,8 @@ function startGame() {
 }
 function sorryPanel() {
     log("Sorry");
-    document.getElementById('game-board').style.display = 'none'; // Hide the game board    
+    youlost=true;
+    gameBoard.style.display = 'none'; // Hide the game board    
     document.getElementById('sorry').style.display = 'block';     // show the sorry message
     var tshirt = document.getElementById('tshirt');
     clearInterval(completionCheckInterval);
@@ -671,7 +718,7 @@ function sorryPanel() {
 }
 
 function revealAnswers() {
-    document.getElementById('game-board').style.display = 'block'; // Hide the sorry panel 
+    gameBoard.style.display = 'block'; // Hide the sorry panel 
     document.getElementById('sorry').style.display = 'none';     // show the game board
     for (let rowIndex = 0; rowIndex < sets.length; rowIndex++) {
         const row = sets[rowIndex];
@@ -687,6 +734,12 @@ function revealAnswers() {
     go4itbtn.style.display = "none";
     msgDiv.innerText = "Maybe Next Time";
     disableTextEntry();
+    showFeedback();
+}
+
+function showFeedback() {
+    document.getElementById('keyboard').style.display = 'none';
+    document.getElementById('feedback').style.display="block";
 }
 
 function getWordWidth(text, font) {

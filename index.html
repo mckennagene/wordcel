@@ -88,6 +88,16 @@
   <div style="display: none;">
     <img id="log" src="log.png" width="1" height="1">
   </div>
+  <div class="feedback" id="feedback" style="display: none;"> 
+    <br/>
+    How was today's game for you?
+    <br/>
+    <img id="thumbsUp" src="thumbsup.png" onclick="rating(1)" style="cursor: pointer;" />
+    <img id="thumbsDown" src="thumbsdown.png" onclick="rating(-1)" style="cursor: pointer;" />
+    <br/>
+    <input type="text" id="commentInput" placeholder="Leave a comment..." />
+    <button id="sendFeedback" onclick="sendFeedback()">Send Feedback</button>
+  </div>
 
 <br/>
 <div id="keyboard" class="virtualkeyboard">
@@ -140,9 +150,30 @@
     Maybe Next Time
     </p>
     <button onclick="revealAnswers()">See Answers</button>
-    
 </div>
-
+<div id="go4bhelp" style="display:none;" class="go4b-instr">
+  <br/>
+  <b>Go For Broke</b>
+  <br/>
+  <br/>
+  Go For Broke reveals all remaining clues. <br/><br/>
+  Get up to 2 clues per unsolved cell. 
+  <br/>
+  <br/>
+  But it also starts a countdown timer, eating up 1 point per second
+  until you solve it all, or run out of points.
+  <br/>
+  <br/>
+  <div style="display: flex; align-items: center;">
+    <input type="checkbox" id="go4bInstCheckbox">
+    <label for="instructionCheckbox">don't show again</label>
+  </div>
+  <br/>
+  <br/>
+  <div style="display: flex; align-items: center;">
+    <button onclick="dontGoForBroke()">Not Now</button>&nbsp;<button onclick="goForBroke()">Go For It</button>
+  </div>
+</div>
 <script src="wordcel.js"></script>
 
 </body>
