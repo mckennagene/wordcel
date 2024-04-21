@@ -64,7 +64,7 @@ const daysSinceEpoch = Math.floor(dt / 8.64e7);
 //console.log("days since 1/1/70 is" + daysSinceEpoch);
 var gameData = JSON.parse(jsonData);
 var totalGames = gameData.length;
-var gameNumber = (daysSinceEpoch - 19792) % totalGames; // roll over when we reach the end
+var gameNumber = (daysSinceEpoch - 19833) % totalGames; // roll over when we reach the end
 var thisGame = gameData[gameNumber]; // today's game data
 var sets = [];
 var hints = [];
@@ -302,6 +302,9 @@ function clickOnVirtualKey(event) {
     event.stopPropagation();
 }
 function clickOnKey(key) {
+    if ('vibrate' in navigator) {
+        navigator.vibrate(10); // Vibrate for 50 milliseconds on key up
+    }
     if (key === "enter") {
         leaveDiv();
         return;
@@ -327,7 +330,7 @@ function clickOnHint(event) {
 function clickGoForBroke() {
     var inst = getCookie('g4bi');
     if( inst != "0" ) { 
-        //gameBoard.style.display = "none";
+        gameBoard.style.opacity = 0.33;
         var div = document.getElementById("go4bhelp");
         div.style.display="flex";
     } else { 
@@ -337,7 +340,7 @@ function clickGoForBroke() {
 function dontGoForBroke() {
     var div = document.getElementById("go4bhelp");
     div.style.display = "none";
-    //gameBoard.style.display = "block";
+    gameBoard.style.opacity = 1.0;
 }
 
 function goForBroke() {
@@ -346,7 +349,7 @@ function goForBroke() {
     if (inst.checked) { setCookie("g4bi", "0", 365); }
     var div = document.getElementById("go4bhelp");
     div.style.display = "none";
-    //gameBoard.style.display = "block";
+    gameBoard.style.opacity= 1.0;
 
     msgDiv.innerText = computePoints() + " points left";
     scoreDiv.style.display = 'none';
@@ -616,6 +619,7 @@ function updateScore() {
         msgDiv.innerText = "You Got It! " + computePoints() + " pts";
         log("Solved");
         stopTimer();
+        leaveDiv();
         disableTextEntry();
         colorAllGreen();
         clearInterval(completionCheckInterval);

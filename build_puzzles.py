@@ -9,7 +9,6 @@ unique_trios = {}      # all unique three-word cores (cols 2,3,4) as keys mapped
 minTrioFreqSum = 99999
 maxTrioFreqSum = -9999
 word_freq = {}         # what is the frequency of the each word in the accepted list?
-pair_freq = {}         # how often is each pair used in a puzzle?
 
 JOIN        = "after" # used in game1, join style, if set to 'after', then requires the next word to follow the current word
 MIN_SUBS    = 1       # used in game2, minimum # of substituable words for the first and last word
@@ -463,7 +462,8 @@ for w in all_pairs:
 # output pair statistics
 
 for p in pairInPuzzleCount:
-    x = p + "\t1\t" + str(pairInPuzzleCount[p]) + "\t" + "\n"
+    hint = all_hints[ p ]
+    x = p + "\t" + hint + "\t" + str(pairInPuzzleCount[p]) + "\n"
     pair_stats.write( x )
 
 
