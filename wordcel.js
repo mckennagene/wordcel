@@ -32,6 +32,7 @@ const scoreColors = [ // not really used anymore
     '#555555',
     '#555555',
 ];
+const SELECTED_BORDER = "2px dashed blue";
 
 // board size, this pretty much needs to be 3 at this point.
 const NUM_ROWS = 3;
@@ -64,7 +65,7 @@ const daysSinceEpoch = Math.floor(dt / 8.64e7);
 //console.log("days since 1/1/70 is" + daysSinceEpoch);
 var gameData = JSON.parse(jsonData);
 var totalGames = gameData.length;
-var gameNumber = (daysSinceEpoch - 19833) % totalGames; // roll over when we reach the end
+var gameNumber = (daysSinceEpoch - 19862) % totalGames; // roll over when we reach the end
 var thisGame = gameData[gameNumber]; // today's game data
 var sets = [];
 var hints = [];
@@ -282,6 +283,15 @@ function createGameBoard() {
     // did they signal to skip instructions?
     var inst = getCookie(COOKIE_INSTR);
     if (inst == "no-mas") { startGame(); }
+
+    // disable contextmenu on all images
+    var images = document.querySelectorAll('img');
+
+    images.forEach(function (img) {
+        img.addEventListener('contextmenu', function (event) {
+            event.preventDefault();
+        });
+    });
 }
 
 function clickOnActualKey(event) {
@@ -363,17 +373,17 @@ function goForBroke() {
             const div1 = document.getElementById(r + '.1');
             const div3 = document.getElementById(r + '.3');
             if (c < 3) {
-                const correctWord = div1.dataset.wordValue.toLowerCase();
-                var typedWord = div1.innerText.trim().toLowerCase().replace(/<div><br><\/div>/g, "");
-                if (typedWord != correctWord) {
+                const correctWord = correctAns(div1);
+                var typedWord = typedAns(div1); 
+                if (!isCorrect(typedWord,correctWord)) { 
                     //console.log(" --- show hint " + r + "," + c + " " + hints[r][c]);
                     showHint(r, c, hints[r][c - 1]);
                 }
             }
             else {
-                const correctWord = div3.dataset.wordValue.toLowerCase();
-                var typedWord = div3.innerText.trim().toLowerCase().replace(/<div><br><\/div>/g, "");
-                if (typedWord != correctWord) {
+                const correctWord = correctAns(div3);
+                var typedWord = typedAns(div3);
+                if (!isCorrect(typedWord,correctWord)) {
                     //console.log(" --- show hint " + r + "," + c + " " + hints[r][c]);
                     showHint(r, c, hints[r][c - 1]);
                 }
@@ -436,21 +446,44 @@ function getAssociatedHint(div) {
 }
 function clickOnDocument(event) {
     if( keyboardMode === KEYBD_VIRTUAL) { leaveDiv(); }
-    else { handleStandardUserInput(event) ; }
+    else { handleStandardUserInput(event,true) ; }
 }
 
-function leaveDiv(event) {
+function typedAns( div ) {
+    var x = div.innerText ;
+    if( x ) { x = x.trim().toLowerCase().replace(/<div><br><\/div>/g, ""); }
+    return x;
+}
+function correctAns( div )  {
+    var x = div.dataset.wordValue;
+    if(x ) { x = x.toLowerCase(); }
+    return x;
+}
+
+function isCorrectInDiv( div ) { 
+    const x = typedAns( div ) ;
+    const y = correctAns( div ) ;
+    if( x === null || y === null ) { return false ; }
+    return ( x === y ) ;
+}
+function isCorrect( typed, correct ) {
+    if (typed === null || correct === null) { return false; }
+    return (typed === correct);
+}
+
+
+function leaveDiv(event,ups=true) {
     if (!currentInputDiv) { return; }
     oldInputDiv = currentInputDiv;
     oldInputDiv.style.border = "1px solid black";
     var oldHintBtn = getAssociatedHint(oldInputDiv);
     if (oldHintBtn) { oldHintBtn.style.opacity = 0.0; }
 
-    const correctWord = oldInputDiv.dataset.wordValue.toLowerCase();
-    var typedWord = oldInputDiv.innerText.trim().toLowerCase().replace(/<div><br><\/div>/g, "");
+    const correctWord = correctAns( oldInputDiv ) ;
+    var typedWord = typedAns( oldInputDiv) ; 
 
     // Check if typed word matches the correct word
-    if (typedWord === correctWord) {
+    if ( isCorrect(typedWord,correctWord) ) { 
         oldInputDiv.style.backgroundColor = CORRECT; // green
         oldInputDiv.innerText = typedWord; // the 'trim' and so on may be needed
         oldInputDiv.removeEventListener('blur', handleVirtualUserInput);
@@ -466,7 +499,7 @@ function leaveDiv(event) {
         oldInputDiv.style.backgroundColor = INCORRECT;
     }
     properlySizeText(currentInputDiv);
-    updateScore();
+    if( ups) { updateScore(); }
     if (event) { event.stopPropagation(); }
     currentInputDiv = null;
 }
@@ -490,19 +523,19 @@ function sendFeedback() {
 // Event listener for input changes
 function handleVirtualUserInput(event) {
     if (numberCorrect == 6) { return; }
-    if (currentInputDiv && event.target != currentInputDiv) {
-        leaveDiv(event);
-    }
+    if (currentInputDiv && event.target != currentInputDiv) {  leaveDiv(event);  }
+    if( event.target != currentInputDiv ) {  event.target.innerText = ''; } // clear the new div of any existing text    
     currentInputDiv = event.target; // set the div we are now updating
     currentInputDiv.style.backgroundColor = NEUTRAL;
-    currentInputDiv.style.border = "2px dashed blue";
+    currentInputDiv.style.border = SELECTED_BORDER;
     var hintBtn = getAssociatedHint(currentInputDiv);
     if (hintBtn) { hintBtn.style.opacity = 1.0; } // make the button visible if it still exists
     event.stopPropagation();
 }
 
-function handleStandardUserInput(event) {
+function handleStandardUserInput(event,docClick=false) {
     if (numberCorrect == 6) { return; }
+    if (currentInputDiv != event.target && !docClick) { event.target.innerText = ''; } // clear the new div of any existing text    
     currentInputDiv = event.target;
     
     // clean up the div we just left
@@ -512,10 +545,8 @@ function handleStandardUserInput(event) {
         if (hintBtn) { hintBtn.style.opacity = 0.0; }
     }
     
-    var correctWord = currentInputDiv.dataset.wordValue ;
-    if( correctWord ) { correctWord = correctWord.toLowerCase(); }
-    var typedWord = currentInputDiv.innerText ;
-    if( typedWord ) { typedWord = typedWord.trim().toLowerCase().replace(/<div><br><\/div>/g, ""); }
+    var correctWord = correctAns( currentInputDiv ) ; 
+    var typedWord = typedAns( currentInputDiv ) ; 
 
     // Check if Enter key is pressed
     if (event.key === 'Enter' || event.key === 'Return' || event.type === 'blur' || event.key === 'Tab') {
@@ -541,7 +572,7 @@ function handleStandardUserInput(event) {
         updateScore();
     } else {
         if (currentInputDiv.className.indexOf("word")>=0 && typedWord != correctWord) {
-            currentInputDiv.style.border = "2px dashed blue";
+            currentInputDiv.style.border = SELECTED_BORDER;
             currentInputDiv.style.outline = "none";
             var hintBtn = getAssociatedHint(currentInputDiv);
             if (hintBtn) { hintBtn.style.opacity = 1.0; }
@@ -598,20 +629,8 @@ function updateScore() {
     for (let rowIndex = 0; rowIndex < NUM_ROWS; rowIndex++) {
         const div1 = document.getElementById(rowIndex + ".1");
         const div3 = document.getElementById(rowIndex + ".3");
-        const div1Text = div1.innerHTML;
-        const div3Text = div3.innerHTML;
-        if (div1Text != null && div1.dataset.wordValue != null) {
-            if (div1Text.trim().toLowerCase().replace(/<div><br><\/div>/g, "")
-                == div1.dataset.wordValue.trim().toLowerCase()) {
-                numberCorrect++;
-            }
-        }
-        if (div3Text != null && div3.dataset.wordValue != null) {
-            if (div3Text.trim().toLowerCase().replace(/<div><br><\/div>/g, "")
-                == div3.dataset.wordValue.trim().toLowerCase()) {
-                numberCorrect++;
-            }
-        }
+        if( isCorrectInDiv(div1) ) { numberCorrect++; }
+        if( isCorrectInDiv(div3) ) { numberCorrect++; }
     }
     if (numberCorrect == 6 && !youlost) {
         scoreDiv.style.display = "none";
@@ -619,7 +638,7 @@ function updateScore() {
         msgDiv.innerText = "You Got It! " + computePoints() + " pts";
         log("Solved");
         stopTimer();
-        leaveDiv();
+        leaveDiv( null, false ); // the false is needed to avoid a recursive call back to updatescore
         disableTextEntry();
         colorAllGreen();
         clearInterval(completionCheckInterval);
@@ -631,6 +650,12 @@ function updateScore() {
             var pWord = " points";
             scoreDiv.innerText = pts + pWord;
             scoreDiv.style.color = scoreColors[score];
+        }
+        else { 
+            log("postGo4It - ???");
+            //stopTimer();
+            //leaveDiv();
+            //disableTextEntry();
         }
     }
 }
@@ -727,10 +752,15 @@ function revealAnswers() {
     for (let rowIndex = 0; rowIndex < sets.length; rowIndex++) {
         const row = sets[rowIndex];
         const div1 = document.getElementById(rowIndex + ".1");
-        div1.innerHTML = div1.dataset.wordValue;
+        if( !isCorrectInDiv( div1 ) ) { 
+            div1.innerHTML = div1.dataset.wordValue;
+            div1.style.backgroundColor = INCORRECT;
+        }
         const div3 = document.getElementById(rowIndex + ".3");
-        div3.innerHTML = div3.dataset.wordValue;
-
+        if( !isCorrectInDiv( div3 ) ) { 
+            div3.innerHTML = div3.dataset.wordValue;
+            div3.style.backgroundColor = INCORRECT;
+        }
         properlySizeText(div1);
         properlySizeText(div3);
     }
@@ -738,7 +768,7 @@ function revealAnswers() {
     go4itbtn.style.display = "none";
     msgDiv.innerText = "Maybe Next Time";
     disableTextEntry();
-    showFeedback();
+    //showFeedback();
 }
 
 function showFeedback() {
